@@ -1,0 +1,22 @@
+
+# --------------------------------------------------------------------------------------------------------------------------------------------
+
+# captcp download and setup
+
+# download captcp from here http://research.protocollabs.com/captcp/installation.html
+# unzip the folder cd into it
+sudo apt install python-dpkt python-numpy make gnuplot texlive-latex-extra mupdf
+sudo make install
+captcp --version
+
+# --------------------------------------------------------------------------------------------------------------------------------------------
+
+# for the graphs do this
+
+mkdir throughput
+captcp throughput -u megabit -s 0.3 -i -o throughput lte-mmwave2-1-0.pcap
+cd throughput
+make
+
+# --------------------------------------------------------------------------------------------------------------------------------------------
+

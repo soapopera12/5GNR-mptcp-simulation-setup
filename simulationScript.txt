@@ -1,0 +1,112 @@
+
+# setting up the simulator
+
+#---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+#  building and installing ns3-mmwave with ns-3
+
+mkdir playground
+cd playground/
+git clone https://github.com/sod-lol/ns-3-dev-git
+mkdir install
+git clone https://github.com/sod-lol/ns-3-dce
+cd ns-3-dev-git/
+sudo add-apt-repository ppa:ubuntu-toolchain-r/test
+sudo apt update
+sudo apt install g++-7 -y
+sudo apt install g++-7 gcc-7 -y
+sudo rm -rf /usr/bin/gcc
+sudo rm -rf /usr/bin/g++
+sudo ln -s /usr/bin/gcc-7 /usr/bin/gcc
+sudo ln -s /usr/bin/g++-7 /usr/bin/g++
+CXXFLAGS_EXTRA="-O3";sudo -H ./waf configure -d optimized --prefix=$HOME/playground/install
+CXXFLAGS_EXTRA="-O3" sudo -H ./waf build
+sudo ./waf install
+cd ..
+
+#---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+# for mptcp in dce we should select the specified branch
+
+git clone https://github.com/libos-nuse/net-next-nuse -b mptcp_trunk_libos --depth=1
+sudo git config --global url."https://github.com/".insteadOf git://github.com/
+cd net-next-nuse/
+
+sudo apt install bc
+sudo rm -rf /usr/bin/g++
+sudo rm -rf /usr/bin/gcc
+sudo ln -s /usr/bin/g++-5 /usr/bin/g++
+sudo ln -s /usr/bin/gcc-5 /usr/bin/gcc
+
+# copying the .config file and then run the commands # to be added
+
+sudo make library ARCH=lib -j 8
+cp arch/lib/tools/libsim-linux-4.1.0.so .
+cd ..
+
+#---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+# installing dce 
+
+sudo rm -rf /usr/bin/gcc
+sudo rm -rf /usr/bin/g++
+sudo ln -s /usr/bin/gcc-7 /usr/bin/gcc
+sudo ln -s /usr/bin/g++-7 /usr/bin/g++
+cd ns-3-dce/
+CXXFLAGS_EXTRA="-O3" sudo -H ./waf configure --with-ns3=$HOME/playground/install  --enable-opt --enable-kernel-stack=$HOME/playground/net-next-nuse/arch --prefix=$HOME/playground/install
+CXXFLAGS_EXTRA="-O3" sudo -H ./waf build
+CXXFLAGS_EXTRA="-O3" sudo -H ./waf install
+cd ..
+
+#---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+# copying the files and creating a symbolic links this is reqiured for kernel issue
+
+sudo cp net-next-nuse/*.so install/bin_dce/
+cd install/bin_dce/
+sudo rm -rf liblinux.so
+sudo ln -s libsim-linux-4.1.0.so liblinux.so
+#extra step required must do
+sudo rm -rf liblinux-4.1.0.so                                           
+sudo ln -s libsim-linux-4.1.0.so liblinux-4.1.0.so			
+cd ../..
+
+sudo chown -R  nikhil:nikhil /home/nikhil
+
+#---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+# adding iperf
+
+#download iperf from here http://sourceforge.net/projects/iperf/files/iperf-2.0.5.tar.gz
+
+patch -p1 -i ../playground/ns-3-dce/utils/iperf_4_dce.patch
+export CFLAGS="-fPIC -U_FORTIFY_SOURCE"
+export CXXFLAGS="-fPIC -U_FORTIFY_SOURCE"
+export LDFLAGS="-pie -rdynamic"
+./configure
+sudo make
+sudo make install
+
+#---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+# adding iproute
+
+# download iproute from here https://src.fedoraproject.org/repo/pkgs/iproute/iproute2-2.6.38.1.tar.bz2/c18932fb8570af4456dbde50b1e90806/
+export CCOPTS="-fPIC -D_GNU_SOURCE -O0 -U_FORTIFY_SOURCE -g"
+export LDFLAGS="-pie -rdynamic"
+sudo apt install flex bison
+sudo add-apt-repository ppa:bitcoin/bitcoin
+sudo apt-get update
+sudo apt-get install -y libdb4.8-dev libdb4.8++-dev
+# Remember configure will give an error you have to ignore it
+sudo make CCOPTS+=-fpic CCOPTS+=-D_GNU_SOURCE CCOPTS+=-O0 CCOPTS+=-U_FORTIFY_SOURCE CCOPTS+=-g LDFLAGS=-pie LDFLAGS+=-rdynamic
+sudo make install
+
+#---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ 
+# update the dce path
+export DCE_PATH=$HOME/playground/net-next-nuse:$HOME/iproute2-2.6.38.1/ip:$HOME/iperf-2.0.5/src
+
+#---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
